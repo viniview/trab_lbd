@@ -264,20 +264,20 @@ CREATE TABLE atleta_rodada (
 
 
 -- =====================================================================
--- 5. ESTATISTICAS: ATUA_EM, TIPO_SCOUT, VALE_PARA, REGISTRA
+-- 5. ESTATISTICAS: ATLETA_PARTIDA, TIPO_SCOUT, POSICAO_SCOUT, SCOUT_PARTIDA
 -- =====================================================================
 
 -- Regra de mapeamento: relacionamento N:M com atributo -> tabela propria.
 -- Se a linha existe, o atleta consta na partida; entrou_em_campo diz se jogou.
 -- A pontuacao e derivada (funcao 6a), nao armazenada.
-CREATE TABLE atua_em (
+CREATE TABLE atleta_partida (
     id_atleta        integer NOT NULL,
     id_partida       integer NOT NULL,
     entrou_em_campo  boolean NOT NULL,
-    CONSTRAINT pk_atua_em PRIMARY KEY (id_atleta, id_partida),
-    CONSTRAINT fk_atua_atleta FOREIGN KEY (id_atleta)
+    CONSTRAINT pk_atleta_partida PRIMARY KEY (id_atleta, id_partida),
+    CONSTRAINT fk_atleta_partida_atleta FOREIGN KEY (id_atleta)
         REFERENCES atleta (id_atleta)   ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT fk_atua_partida FOREIGN KEY (id_partida)
+    CONSTRAINT fk_atleta_partida_partida FOREIGN KEY (id_partida)
         REFERENCES partida (id_partida) ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 
@@ -295,35 +295,35 @@ CREATE TABLE tipo_scout (
 -- N:M tipo_scout x posicao: em quais posicoes cada scout pontua
 -- (SG: gol/lat/zag; DE, DP, GS: gol; os demais: gol/lat/zag/mei/ata).
 -- Todo scout deve ter ao menos uma linha aqui (populado em 02-dados.sql).
-CREATE TABLE vale_para (
+CREATE TABLE posicao_scout (
     sigla       varchar(2) NOT NULL,
     id_posicao  integer    NOT NULL,
-    CONSTRAINT pk_vale_para PRIMARY KEY (sigla, id_posicao),
-    CONSTRAINT fk_vp_scout FOREIGN KEY (sigla)
+    CONSTRAINT pk_posicao_scout PRIMARY KEY (sigla, id_posicao),
+    CONSTRAINT fk_posicao_scout_scout FOREIGN KEY (sigla)
         REFERENCES tipo_scout (sigla)     ON DELETE CASCADE  ON UPDATE RESTRICT,
-    CONSTRAINT fk_vp_posicao FOREIGN KEY (id_posicao)
+    CONSTRAINT fk_posicao_scout_posicao FOREIGN KEY (id_posicao)
         REFERENCES posicao (id_posicao)   ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 
 -- Regra de mapeamento: relacionamento ternario -> tabela com PK composta
--- pelas tres chaves. Referencia atua_em: so ha scout de atleta que consta
+-- pelas tres chaves. Referencia atleta_partida: so ha scout de atleta que consta
 -- na partida. quantidade > 0 (quantidade zero nao e registrada).
 -- A carga IGNORA siglas fora de tipo_scout: a fonte traz 'V' (vitoria) so para
 -- tecnicos (74 ocorrencias), mas na liga a pontuacao do tecnico sai do placar.
 -- Scout vindo como null na fonte (9 linhas) = nenhuma linha aqui; o atleta
--- continua em atua_em. Scouts de quem nao entrou em campo sao guardados (10
+-- continua em atleta_partida. Scouts de quem nao entrou em campo sao guardados (10
 -- linhas, so cartoes) mas a funcao 6(a) devolve 0 para eles (secao 2.7).
-CREATE TABLE registra (
+CREATE TABLE scout_partida (
     id_atleta   integer  NOT NULL,
     id_partida  integer  NOT NULL,
     sigla       varchar(2) NOT NULL,
     quantidade  smallint NOT NULL,
-    CONSTRAINT pk_registra PRIMARY KEY (id_atleta, id_partida, sigla),
-    CONSTRAINT ck_registra_qtd CHECK (quantidade > 0),
+    CONSTRAINT pk_scout_partida PRIMARY KEY (id_atleta, id_partida, sigla),
+    CONSTRAINT ck_scout_partida_qtd CHECK (quantidade > 0),
     -- CASCADE: o scout e detalhe da participacao do atleta na partida.
-    CONSTRAINT fk_registra_atua FOREIGN KEY (id_atleta, id_partida)
-        REFERENCES atua_em (id_atleta, id_partida) ON DELETE CASCADE ON UPDATE RESTRICT,
-    CONSTRAINT fk_registra_scout FOREIGN KEY (sigla)
+    CONSTRAINT fk_scout_partida_atleta_partida FOREIGN KEY (id_atleta, id_partida)
+        REFERENCES atleta_partida (id_atleta, id_partida) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT fk_scout_partida_scout FOREIGN KEY (sigla)
         REFERENCES tipo_scout (sigla)     ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 
@@ -342,15 +342,15 @@ CREATE TABLE esquema_tatico (
 
 -- N:M esquema x posicao com atributo quantidade.
 -- O DER nao exige linha para posicao ausente; para 3-4-3, lateral = 0.
-CREATE TABLE exige (
+CREATE TABLE esquema_posicao (
     id_esquema  integer  NOT NULL,
     id_posicao  integer  NOT NULL,
     quantidade  smallint NOT NULL,
-    CONSTRAINT pk_exige PRIMARY KEY (id_esquema, id_posicao),
-    CONSTRAINT ck_exige_qtd CHECK (quantidade BETWEEN 0 AND 5),
-    CONSTRAINT fk_exige_esquema FOREIGN KEY (id_esquema)
+    CONSTRAINT pk_esquema_posicao PRIMARY KEY (id_esquema, id_posicao),
+    CONSTRAINT ck_esquema_posicao_qtd CHECK (quantidade BETWEEN 0 AND 5),
+    CONSTRAINT fk_esquema_posicao_esquema FOREIGN KEY (id_esquema)
         REFERENCES esquema_tatico (id_esquema) ON DELETE CASCADE  ON UPDATE RESTRICT,
-    CONSTRAINT fk_exige_posicao FOREIGN KEY (id_posicao)
+    CONSTRAINT fk_esquema_posicao_posicao FOREIGN KEY (id_posicao)
         REFERENCES posicao (id_posicao)        ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 

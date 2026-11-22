@@ -61,21 +61,21 @@ ON CONFLICT (sigla) DO NOTHING;
 -- Posicoes em que cada scout pontua (coluna "Observacao" da tabela 2.7).
 -- Tecnico real nao tem scouts: sua pontuacao sai do placar.
 -- a) scouts sem restricao: goleiro, lateral, zagueiro, meia e atacante
-INSERT INTO vale_para (sigla, id_posicao)
+INSERT INTO posicao_scout (sigla, id_posicao)
 SELECT t.sigla, p.id_posicao
   FROM tipo_scout t
   JOIN posicao p ON p.abreviacao IN ('gol', 'lat', 'zag', 'mei', 'ata')
  WHERE t.sigla NOT IN ('SG', 'DE', 'DP', 'GS')
 ON CONFLICT (sigla, id_posicao) DO NOTHING;
 -- b) SG: so goleiro, lateral e zagueiro
-INSERT INTO vale_para (sigla, id_posicao)
+INSERT INTO posicao_scout (sigla, id_posicao)
 SELECT t.sigla, p.id_posicao
   FROM tipo_scout t
   JOIN posicao p ON p.abreviacao IN ('gol', 'lat', 'zag')
  WHERE t.sigla = 'SG'
 ON CONFLICT (sigla, id_posicao) DO NOTHING;
 -- c) DE, DP e GS: so goleiro
-INSERT INTO vale_para (sigla, id_posicao)
+INSERT INTO posicao_scout (sigla, id_posicao)
 SELECT t.sigla, p.id_posicao
   FROM tipo_scout t
   JOIN posicao p ON p.abreviacao = 'gol'
