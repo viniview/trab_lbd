@@ -26,18 +26,18 @@ SELECT DISTINCT ON (j.id_clube, j.numero_rodada)
 CREATE OR REPLACE VIEW v_pontuacao_atleta_rodada AS
 SELECT ae.id_atleta, pa.numero_rodada,
        COALESCE(SUM(CASE WHEN vp.sigla IS NOT NULL THEN r.quantidade * ts.valor_pontos END), 0) AS pontuacao
-  FROM atua_em ae
+  FROM atleta_partida ae
   JOIN partida pa ON pa.id_partida = ae.id_partida
   JOIN atleta a   ON a.id_atleta = ae.id_atleta
   JOIN posicao po ON po.id_posicao = a.id_posicao
-  LEFT JOIN registra r    ON r.id_atleta = ae.id_atleta AND r.id_partida = ae.id_partida
+  LEFT JOIN scout_partida r    ON r.id_atleta = ae.id_atleta AND r.id_partida = ae.id_partida
   LEFT JOIN tipo_scout ts ON ts.sigla = r.sigla
-  LEFT JOIN vale_para vp  ON vp.sigla = r.sigla AND vp.id_posicao = a.id_posicao
+  LEFT JOIN posicao_scout vp  ON vp.sigla = r.sigla AND vp.id_posicao = a.id_posicao
  WHERE ae.entrou_em_campo AND po.abreviacao <> 'tec'
  GROUP BY ae.id_atleta, pa.numero_rodada
 UNION ALL
 SELECT ae.id_atleta, pa.numero_rodada, COALESCE(MAX(tr.pontos), 0)
-  FROM atua_em ae
+  FROM atleta_partida ae
   JOIN partida pa       ON pa.id_partida = ae.id_partida
   JOIN atleta a         ON a.id_atleta = ae.id_atleta
   JOIN posicao po       ON po.id_posicao = a.id_posicao

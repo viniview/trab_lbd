@@ -45,11 +45,11 @@ BEGIN
 
     RETURN COALESCE((
         SELECT SUM(r.quantidade * ts.valor_pontos)
-          FROM atua_em ae
+          FROM atleta_partida ae
           JOIN partida pa     ON pa.id_partida = ae.id_partida AND pa.numero_rodada = p_rodada
-          JOIN registra r     ON r.id_atleta = ae.id_atleta AND r.id_partida = ae.id_partida
+          JOIN scout_partida r     ON r.id_atleta = ae.id_atleta AND r.id_partida = ae.id_partida
           JOIN tipo_scout ts  ON ts.sigla = r.sigla
-          JOIN vale_para vp   ON vp.sigla = r.sigla AND vp.id_posicao = v_posicao
+          JOIN posicao_scout vp   ON vp.sigla = r.sigla AND vp.id_posicao = v_posicao
          WHERE ae.id_atleta = p_id_atleta AND ae.entrou_em_campo
     ), 0);
 END $$;
@@ -135,7 +135,7 @@ BEGIN
         RAISE EXCEPTION 'O técnico real não pode ser capitão.';
     END IF;
 
-    SELECT quantidade INTO v_vagas FROM exige WHERE id_esquema = v_esquema AND id_posicao = v_pos;
+    SELECT quantidade INTO v_vagas FROM esquema_posicao WHERE id_esquema = v_esquema AND id_posicao = v_pos;
     SELECT count(*) INTO v_ocupadas
       FROM escala e JOIN atleta a USING (id_atleta)
      WHERE e.id_tecnico = v_tec AND e.numero_rodada = v_rod
@@ -207,11 +207,11 @@ BEGIN
     RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END $$;
 
-DROP TRIGGER IF EXISTS trg_trava_registra ON registra;
-CREATE TRIGGER trg_trava_registra BEFORE INSERT OR UPDATE OR DELETE ON registra
+DROP TRIGGER IF EXISTS trg_trava_scout_partida ON scout_partida;
+CREATE TRIGGER trg_trava_scout_partida BEFORE INSERT OR UPDATE OR DELETE ON scout_partida
     FOR EACH ROW EXECUTE FUNCTION tg_trava_rodada_consolidada();
-DROP TRIGGER IF EXISTS trg_trava_atua_em ON atua_em;
-CREATE TRIGGER trg_trava_atua_em BEFORE INSERT OR UPDATE OR DELETE ON atua_em
+DROP TRIGGER IF EXISTS trg_trava_atleta_partida ON atleta_partida;
+CREATE TRIGGER trg_trava_atleta_partida BEFORE INSERT OR UPDATE OR DELETE ON atleta_partida
     FOR EACH ROW EXECUTE FUNCTION tg_trava_rodada_consolidada();
 DROP TRIGGER IF EXISTS trg_trava_partida ON partida;
 CREATE TRIGGER trg_trava_partida BEFORE INSERT OR UPDATE OR DELETE ON partida
@@ -260,7 +260,7 @@ BEGIN
                (SELECT count(*) FROM escala e JOIN atleta a USING (id_atleta)
                  WHERE e.id_tecnico = p_id_tecnico AND e.numero_rodada = p_rodada
                    AND a.id_posicao = x.id_posicao) AS escolhida
-          FROM exige x JOIN posicao p USING (id_posicao)
+          FROM esquema_posicao x JOIN posicao p USING (id_posicao)
          WHERE x.id_esquema = v_esquema
     LOOP
         IF r.escolhida <> r.exigida THEN
@@ -416,11 +416,11 @@ BEGIN
     CREATE TEMP TABLE tmp_valorizacao ON COMMIT DROP AS
     WITH jogou AS (
         SELECT DISTINCT ae.id_atleta
-          FROM atua_em ae JOIN partida p ON p.id_partida = ae.id_partida
+          FROM atleta_partida ae JOIN partida p ON p.id_partida = ae.id_partida
          WHERE p.numero_rodada = p_rodada AND ae.entrou_em_campo
     ), historico AS (
         SELECT DISTINCT ae.id_atleta, p.numero_rodada
-          FROM atua_em ae
+          FROM atleta_partida ae
           JOIN partida p ON p.id_partida = ae.id_partida
           JOIN rodada r  ON r.numero = p.numero_rodada AND r.estado = 'consolidada'
          WHERE ae.entrou_em_campo AND ae.id_atleta IN (SELECT id_atleta FROM jogou)
