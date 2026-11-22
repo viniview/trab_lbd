@@ -19,7 +19,7 @@ SET search_path TO liga_facom;
 --     escalacao(id_tecnico, numero_rodada),
 --     participa(id_liga, id_tecnico),
 --     historico_patrimonio(id_time, numero_rodada),
---     atua_em(id_atleta, id_partida), registra(atleta, partida, sigla));
+--     atleta_partida(id_atleta, id_partida), scout_partida(atleta, partida, sigla));
 --   * UNIQUEs: uq_tecnico_email, uq_time_tecnico, uq_clube_api,
 --     uq_clube_abrev, uq_posicao_api, uq_posicao_abrev, uq_situacao_api,
 --     uq_situacao_nome, uq_atleta_api, uq_partida_api, uq_esquema_nome,
@@ -44,8 +44,8 @@ CREATE INDEX IF NOT EXISTS ix_atleta_rodada_clube_rodada
 -- Gatilhos trg_trava_* e as funcoes de pontuacao buscam a participacao
 -- do atleta pela partida; a PK (id_atleta, id_partida) nao responde por
 -- id_partida sozinho.
-CREATE INDEX IF NOT EXISTS ix_atua_em_partida
-    ON atua_em (id_partida);
+CREATE INDEX IF NOT EXISTS ix_atleta_partida_partida
+    ON atleta_partida (id_partida);
 
 -- pontuacao_tecnico_real, v_pontos_tecnico_real e abrir_rodada filtram
 -- partidas por rodada; a PK e id_partida e o unico e id_api.
