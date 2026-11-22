@@ -84,13 +84,13 @@ def preparar(pasta, siglas_validas, rodadas_consolidadas=frozenset()):
     clubes = list(clubes.values())
 
     # ---- esquemas taticos
-    esquemas, exige = [], []
+    esquemas, esquema_posicao = [], []
     for e in esquemas_json:
         if sum(e["posicoes"].values()) != 12:
             raise ErroDeCarga(f"Esquema {e['nome']} nao soma 12 posicoes.")
         esquemas.append((e["nome"],))
         for abrev, qtd in e["posicoes"].items():      
-            exige.append((e["nome"], abrev, qtd))
+            esquema_posicao.append((e["nome"], abrev, qtd))
 
     # ---- partidas 
     partidas, partida_do_clube = [], {}
@@ -119,8 +119,8 @@ def preparar(pasta, siglas_validas, rodadas_consolidadas=frozenset()):
                                              id_situacao_fallback, v["clube_id"])
     atletas.update(so_pontuados)
 
-    # ---- atleta_rodada, atua_em, registra -----------------------------------
-    atleta_rodada, atua_em, registra = [], [], []
+    # ---- atleta_rodada, atleta_partida, scout_partida -----------------------------------
+    atleta_rodada, atleta_partida, scout_partida = [], [], []
     ignorados = Counter()
     for r in rodadas:
         for id_txt, v in pontuados_rod[r]["atletas"].items():
@@ -130,19 +130,19 @@ def preparar(pasta, siglas_validas, rodadas_consolidadas=frozenset()):
             if partida is None:
                 avisos.append(f"Rodada {r}: atleta {id_atleta} sem partida para o clube {v['clube_id']}.")
                 continue
-            atua_em.append((id_atleta, partida, bool(v["entrou_em_campo"])))
+            atleta_partida.append((id_atleta, partida, bool(v["entrou_em_campo"])))
             for sigla, qtd in (v.get("scout") or {}).items():    # scout pode ser null
                 if sigla not in siglas_validas:
                     ignorados[sigla] += 1                         # ex.: 'V' (so tecnicos)
                 elif int(qtd) > 0:
-                    registra.append((id_atleta, partida, sigla, int(qtd)))
+                    scout_partida.append((id_atleta, partida, sigla, int(qtd)))
 
     return {
         "rodadas": rodadas, "posicoes": posicoes, "situacoes": situacoes,
-        "clubes": clubes, "esquemas": esquemas, "exige": exige,
+        "clubes": clubes, "esquemas": esquemas, "esquema_posicao": esquema_posicao,
         "atletas": list(atletas.values()), "n_so_pontuados": len(so_pontuados),
-        "partidas": partidas, "atleta_rodada": atleta_rodada, "atua_em": atua_em,
-        "registra": registra, "siglas_ignoradas": dict(ignorados), "avisos": avisos,
+        "partidas": partidas, "atleta_rodada": atleta_rodada, "atleta_partida": atleta_partida,
+        "scout_partida": scout_partida, "siglas_ignoradas": dict(ignorados), "avisos": avisos,
     }
 
 
@@ -179,14 +179,14 @@ def gravar(cur, d):
     lote("""INSERT INTO esquema_tatico (nome) VALUES %s
             ON CONFLICT (nome) DO NOTHING""", d["esquemas"])
 
-    lote("""INSERT INTO exige (id_esquema, id_posicao, quantidade)
+    lote("""INSERT INTO esquema_posicao (id_esquema, id_posicao, quantidade)
             SELECT e.id_esquema, p.id_posicao, v.qtd::smallint
               FROM (VALUES %s) AS v(nome, abrev, qtd)
               JOIN esquema_tatico e ON e.nome = v.nome::varchar
               JOIN posicao p        ON p.abreviacao = v.abrev::varchar
             ON CONFLICT (id_esquema, id_posicao) DO UPDATE SET quantidade = EXCLUDED.quantidade""",
-         d["exige"])
-    conferir("exige", len(d["exige"]), "SELECT count(*) FROM exige", ())
+         d["esquema_posicao"])
+    conferir("esquema_posicao", len(d["esquema_posicao"]), "SELECT count(*) FROM esquema_posicao", ())
 
 
     lote("""INSERT INTO atleta (id_api, nome_completo, apelido, preco_inicial,
@@ -236,26 +236,26 @@ def gravar(cur, d):
     conferir("atleta_rodada", len(d["atleta_rodada"]),
              "SELECT count(*) FROM atleta_rodada WHERE numero_rodada = ANY(%s)", (rodadas,))
 
-    lote("""INSERT INTO atua_em (id_atleta, id_partida, entrou_em_campo)
+    lote("""INSERT INTO atleta_partida (id_atleta, id_partida, entrou_em_campo)
             SELECT a.id_atleta, pa.id_partida, v.entrou::boolean
               FROM (VALUES %s) AS v(atl_api, partida_api, entrou)
               JOIN atleta a   ON a.id_api = v.atl_api::integer
               JOIN partida pa ON pa.id_api = v.partida_api::integer
             ON CONFLICT (id_atleta, id_partida) DO UPDATE
-               SET entrou_em_campo = EXCLUDED.entrou_em_campo""", d["atua_em"])
-    conferir("atua_em", len(d["atua_em"]),
-             """SELECT count(*) FROM atua_em ae JOIN partida p ON p.id_partida = ae.id_partida
+               SET entrou_em_campo = EXCLUDED.entrou_em_campo""", d["atleta_partida"])
+    conferir("atleta_partida", len(d["atleta_partida"]),
+             """SELECT count(*) FROM atleta_partida ap JOIN partida p ON p.id_partida = ap.id_partida
                  WHERE p.numero_rodada = ANY(%s)""", (rodadas,))
 
-    lote("""INSERT INTO registra (id_atleta, id_partida, sigla, quantidade)
+    lote("""INSERT INTO scout_partida (id_atleta, id_partida, sigla, quantidade)
             SELECT a.id_atleta, pa.id_partida, v.sigla::varchar, v.qtd::smallint
               FROM (VALUES %s) AS v(atl_api, partida_api, sigla, qtd)
               JOIN atleta a   ON a.id_api = v.atl_api::integer
               JOIN partida pa ON pa.id_api = v.partida_api::integer
             ON CONFLICT (id_atleta, id_partida, sigla) DO UPDATE
-               SET quantidade = EXCLUDED.quantidade""", d["registra"])
-    conferir("registra", len(d["registra"]),
-             """SELECT count(*) FROM registra r JOIN partida p ON p.id_partida = r.id_partida
+               SET quantidade = EXCLUDED.quantidade""", d["scout_partida"])
+    conferir("scout_partida", len(d["scout_partida"]),
+             """SELECT count(*) FROM scout_partida sp JOIN partida p ON p.id_partida = sp.id_partida
                  WHERE p.numero_rodada = ANY(%s)""", (rodadas,))
 
 
@@ -277,8 +277,8 @@ def verificar_pre_requisitos(cur):
 # ---------------------------------------------------------------------------
 def relatorio(d):
     print(f"  rodadas carregadas : {d['rodadas']}")
-    for chave in ("posicoes", "situacoes", "clubes", "esquemas", "exige", "atletas",
-                  "partidas", "atleta_rodada", "atua_em", "registra"):
+    for chave in ("posicoes", "situacoes", "clubes", "esquemas", "esquema_posicao", "atletas",
+                  "partidas", "atleta_rodada", "atleta_partida", "scout_partida"):
         print(f"  {chave:<18} : {len(d[chave])}")
     print(f"  atletas so nos pontuados (fallback): {d['n_so_pontuados']}")
     if d["siglas_ignoradas"]:
