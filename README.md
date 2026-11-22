@@ -64,7 +64,13 @@ pip install -r carga/requirements.txt
 export PGHOST=localhost PGPORT=5432 PGDATABASE=lbd PGUSER=lbd PGPASSWORD=lbd2026
 ```
 
-
+## Rodar a aplicacao
+´´´
+source .venv/bin/activate
+export PGHOST=localhost PGPORT=5432 PGDATABASE=lbd PGUSER=lbd PGPASSWORD=lbd2026
+python3 app/main.py
+´´´
 ## Documentação
 
 - `docs/der.drawio.png`: diagrama entidade-relacionamento.
+- `docs/mao_rel.jpeg`: mapeamento relacional
