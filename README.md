@@ -2,7 +2,7 @@
 Trabalho de Laboratório de Banco de Dados
 
 João Vitor Terres - 202519060465
-
+Vinícius Fialho Cominetti - 202519060236
 Saulo Emanuel Borba - 202519060015
 # Liga FACOM Fantasy
 
